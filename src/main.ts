@@ -70,6 +70,8 @@ async function getOwnedGames(requestArguments: Omit<GetOwnedGamesRequest, "inclu
 async function getOwnedGames(requestArguments: Omit<GetOwnedGamesRequest, "includeAppInfo"> & { includeAppInfo: true }): Promise<GetOwnedGamesWithAppInfoResponse>
 async function getOwnedGames(requestArguments: GetOwnedGamesRequest): Promise<GetBaseOwnedGamesResponse | GetOwnedGamesWithAppInfoResponse>
 {
+  // Format based partly on https://developer.valvesoftware.com/wiki/Steam_Web_API#GetOwnedGames_.28v0001.29
+  // partly on inspecting the response.
   const response = await axios.get(
     "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/",
     {
