@@ -33,6 +33,13 @@ async function parseConfig() {
       type: "string",
       coerce: (template: string) => Handlebars.compile(template),
     })
+    .option("output-template", {
+      alias: "t",
+      demandOption: true,
+      describe: "A handlebars template to evaluate for each game and write to file",
+      type: "string",
+      coerce: (template: string) => Handlebars.compile(template),
+    })
     .env("TURBINE")
     .config()
     .argv);
