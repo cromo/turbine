@@ -3,6 +3,7 @@ import Handlebars from "handlebars";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { z } from "zod";
+import path from "node:path";
 
 async function parseConfig() {
   // Parse CLI/config/environment using yargs
@@ -130,6 +131,7 @@ async function main() {
   console.log(
     games
       .map((game) => config.outputFilenameTemplate({ ...game, safeName: sanitizeFilename(game.name) }))
+      .map((filename) => path.resolve(filename))
       .slice(0, 100)
   );
 }
