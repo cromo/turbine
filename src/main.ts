@@ -4,15 +4,9 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { z } from "zod";
 import path from "node:path";
+import * as fs from "node:fs/promises"
 
 async function parseConfig() {
-  // Parse CLI/config/environment using yargs
-  // Need:
-  // - Steam ID
-  // - Steam API key
-  // - Template location?
-  // - Output location?
-
   return await (yargs(hideBin(process.argv))
     .option("steam-api-key", {
       alias: "k",
@@ -39,6 +33,11 @@ async function parseConfig() {
       describe: "A handlebars template to evaluate for each game and write to file",
       type: "string",
       coerce: (template: string) => Handlebars.compile(template),
+    })
+    .option("mkdirp", {
+      alias: "d",
+      describe: "Create directories in file path if they don't exist",
+      type: "boolean",
     })
     .env("TURBINE")
     .config()
@@ -127,20 +126,15 @@ async function main() {
     includeAppInfo: true,
     includePlayedFreeGames: true,
   });
-  console.log(`http://media.steampowered.com/steamcommunity/public/images/apps/${games[0].appid}/${games[0].img_icon_url}.jpg`);
-  console.log(
-    "problem games names:",
-    games
-      .map(({ name }) => name)
-      .filter((name) => !isValidFilename(`Turbine generated - ${name}.md`))
-      .map(sanitizeFilename)
-  );
-  console.log(
-    games
-      .map((game) => config.outputFilenameTemplate({ ...game, safeName: sanitizeFilename(game.name) }))
-      .map((filename) => path.resolve(filename))
-      .slice(0, 100)
-  );
+  await Promise.all(games.map(async (game) => {
+    const templateContext = { ...game, safeName: sanitizeFilename(game.name) };
+    const filename = config.outputFilenameTemplate(templateContext);
+    const content = config.outputTemplate(templateContext);
+    if (config.mkdirp) {
+      await fs.mkdir(path.dirname(filename), { recursive: true });
+    }
+    await fs.writeFile(filename, content);
+  }));
 }
 
 main();
