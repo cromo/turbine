@@ -40,6 +40,8 @@ const baseOwnedGameSchema = z.object({
 });
 const ownedGameWithAppInfoSchema = baseOwnedGameSchema.extend({
   name: z.string(),
+  // Can be combined with the appid to form an image URL via:
+  // http://media.steampowered.com/steamcommunity/public/images/apps/{appid}/{hash}.jpg
   img_icon_url: z.string(),
   // It seems that this may not be included with all games?
   // content_descriptorids: z.number().int().array(),
@@ -95,7 +97,7 @@ async function main() {
     includeAppInfo: true,
     includePlayedFreeGames: true,
   });
-  console.log(games.response.games[0]);
+  console.log(`http://media.steampowered.com/steamcommunity/public/images/apps/${games.response.games[0].appid}/${games.response.games[0].img_icon_url}.jpg`);
 }
 
 main();
