@@ -1,4 +1,5 @@
 import axios from "axios";
+import Handlebars from "handlebars";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { z } from "zod";
@@ -23,6 +24,13 @@ async function parseConfig() {
       demandOption: true,
       describe: "The Steam ID of your account",
       type: "string",
+    })
+    .option("output-filename-template", {
+      alias: "o",
+      demandOption: true,
+      describe: "A handlebars template to use for the filename of each game",
+      type: "string",
+      coerce: (template: string) => Handlebars.compile(template),
     })
     .env("TURBINE")
     .config()
@@ -97,9 +105,17 @@ function isValidFilename(name: string): boolean {
   return !forbiddenPattern.test(name);
 }
 
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/(?<! ): /g, " - ")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .trim();
+}
+
 async function main() {
+  const config = await parseConfig();
   const { response: { games } } = await getOwnedGames({
-    ...await parseConfig(),
+    ...config,
     includeAppInfo: true,
     includePlayedFreeGames: true,
   });
@@ -109,8 +125,13 @@ async function main() {
     games
       .map(({ name }) => name)
       .filter((name) => !isValidFilename(`Turbine generated - ${name}.md`))
-      .map((name) => name.replace(/(?<! ): /g, " - ").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim())
-  )
+      .map(sanitizeFilename)
+  );
+  console.log(
+    games
+      .map((game) => config.outputFilenameTemplate({ ...game, safeName: sanitizeFilename(game.name) }))
+      .slice(0, 100)
+  );
 }
 
 main();
