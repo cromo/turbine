@@ -91,13 +91,26 @@ async function getOwnedGames(requestArguments: GetOwnedGamesRequest): Promise<Ge
     getBaseOwnedGamesResponseSchema.parse(response.data);
 }
 
+// Based on https://stackoverflow.com/a/31976060
+const forbiddenPattern = /[<>:"/\\|?*]|[\x00-\x1F]|^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..+)?$|[ .]$/i
+function isValidFilename(name: string): boolean {
+  return !forbiddenPattern.test(name);
+}
+
 async function main() {
-  const games = await getOwnedGames({
+  const { response: { games } } = await getOwnedGames({
     ...await parseConfig(),
     includeAppInfo: true,
     includePlayedFreeGames: true,
   });
-  console.log(`http://media.steampowered.com/steamcommunity/public/images/apps/${games.response.games[0].appid}/${games.response.games[0].img_icon_url}.jpg`);
+  console.log(`http://media.steampowered.com/steamcommunity/public/images/apps/${games[0].appid}/${games[0].img_icon_url}.jpg`);
+  console.log(
+    "problem games names:",
+    games
+      .map(({ name }) => name)
+      .filter((name) => !isValidFilename(`Turbine generated - ${name}.md`))
+      .map((name) => name.replace(/(?<! ): /g, " - ").replace(/[<>:"/\\|?*\x00-\x1F]/g, "").trim())
+  )
 }
 
 main();
