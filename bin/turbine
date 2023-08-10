@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+// Add the ts-node loader and disable type checking for speed
+require("ts-node").register({ transpileOnly: true });
+require("../src/main.ts");
