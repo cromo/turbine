@@ -39,6 +39,11 @@ async function parseConfig() {
       describe: "Create directories in file path if they don't exist",
       type: "boolean",
     })
+    .option("dry-run", {
+      describe: "Request the data but only output the actions taken after that",
+      type: "boolean",
+      default: false,
+    })
     .env("TURBINE")
     .config()
     .argv);
@@ -119,6 +124,27 @@ function sanitizeFilename(name: string): string {
     .trim();
 }
 
+function dryRunLog(log: { action: string;[Key: string]: unknown }) {
+  console.debug(JSON.stringify(log));
+}
+
+async function makeDirectoryPathForFile(filename: string, config?: { dryRun: boolean }) {
+  const directory = path.dirname(filename);
+  if (config?.dryRun) {
+    dryRunLog({ action: "create directory", path: directory, absolutePath: path.resolve(directory) });
+    return;
+  }
+  await fs.mkdir(directory, { recursive: true });
+}
+
+async function writeContentsToFile(filename: string, content: string, config?: { dryRun: boolean }) {
+  if (config?.dryRun) {
+    dryRunLog({ action: "write file", filename, content });
+    return;
+  }
+  await fs.writeFile(filename, content);
+}
+
 async function main() {
   const config = await parseConfig();
   const { response: { games } } = await getOwnedGames({
@@ -131,9 +157,9 @@ async function main() {
     const filename = config.outputFilenameTemplate(templateContext);
     const content = config.outputTemplate(templateContext);
     if (config.mkdirp) {
-      await fs.mkdir(path.dirname(filename), { recursive: true });
+      await makeDirectoryPathForFile(filename, config);
     }
-    await fs.writeFile(filename, content);
+    await writeContentsToFile(filename, content, config);
   }));
 }
 
