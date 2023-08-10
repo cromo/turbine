@@ -1,6 +1,6 @@
 # Turbine
 
-Turbine is a [Steam](https://store.steampowered.com/about/) powered file generator! Turbine uses responses from the Steam API to generate text files using [Handlebars templates](https://handlebarsjs.com/guide/). (Currently limited to a user's owned games, but likely to expand in the future.)
+Turbine is a [Steam](https://store.steampowered.com/about/) powered file generator! Turbine uses responses from the Steam API to generate text files using [Handlebars templates](https://handlebarsjs.com/guide/). (Currently limited to generating a file for each of a user's owned games, but likely to expand in the future.)
 
 *Turbine is a third party application and is not endorsed nor affiliated with Valve or Steam.*
 
