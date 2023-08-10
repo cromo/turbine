@@ -33,7 +33,7 @@ npm uninstall --global turbine
 
 If you installed globally, you can call `turbine` directly, otherwise you can call it within the repository via `npm start`. Running it without arguments will print out usage information.
 
-`turbine` can be configured via command line arguments, environment variables, a JSON configuration file, or any combination of these. The primary way is via command line arguments, which is what is documented below. To use environment variables, remove the leading dashes of the command line argument, convert it to uppercase, replace all hyphens with underscores, and prefix it with `TURBINE_`. To use a JSON file, place the argument name without leading dashes as keys in a top level object and pass the filename to the `--config` command line argument. A sample configuration file can be found at `config-example.json`.
+`turbine` can be configured via command line arguments, environment variables, a JSON configuration file, or any combination of these. The primary way is via command line arguments, which is what is documented below. To use environment variables, remove the leading dashes of the command line argument, convert it to uppercase, replace all hyphens with underscores, and prefix it with `TURBINE_`, e.g. `--steam-api-key` becomes `TURBINE_STEAM_API_KEY`. To use a JSON file, place the argument name without leading dashes as keys in a top level object and pass the filename to the `--config` command line argument. A sample configuration file can be found at `config-example.json`.
 
 ### `--steam-api-key` *string*
 
