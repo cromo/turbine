@@ -20,6 +20,13 @@ async function parseConfig() {
       describe: "The Steam ID of your account",
       type: "string",
     })
+    .option("output-type", {
+      default: "per-game",
+      choices: ["per-game", "per-user"],
+      describe: "Whether to apply the template once per game or for a user's entire library at once",
+      type: "string",
+      coerce: (choice: string) => z.enum(["per-game", "per-user"]).parse(choice),
+    })
     .option("output-filename-template", {
       alias: "o",
       demandOption: true,
@@ -66,6 +73,7 @@ const ownedGameWithAppInfoSchema = baseOwnedGameSchema.extend({
   // It seems that this may not be included with all games?
   // content_descriptorids: z.number().int().array(),
 });
+type OwnedGameWithAppInfo = z.infer<typeof ownedGameWithAppInfoSchema>;
 const getBaseOwnedGamesResponseSchema = z.object({
   response: z.object({
     game_count: z.number().int(),
@@ -152,6 +160,22 @@ async function main() {
     includeAppInfo: true,
     includePlayedFreeGames: true,
   });
+  if (config.outputType === "per-game") {
+    await generateFilesPerGame(games, config);
+  } else {
+    await generateFilePerUser(games, config);
+  }
+}
+
+async function generateFilesPerGame(
+  games: OwnedGameWithAppInfo[],
+  config: {
+    outputFilenameTemplate: HandlebarsTemplateDelegate<any>;
+    outputTemplate: HandlebarsTemplateDelegate<any>;
+    mkdirp: boolean | undefined;
+    dryRun: boolean;
+  }
+) {
   await Promise.all(games.map(async (game) => {
     const templateContext = { ...game, safeName: sanitizeFilename(game.name) };
     const filename = config.outputFilenameTemplate(templateContext);
@@ -161,6 +185,26 @@ async function main() {
     }
     await writeContentsToFile(filename, content, config);
   }));
+}
+
+async function generateFilePerUser(
+  games: OwnedGameWithAppInfo[],
+  config: {
+    outputFilenameTemplate: HandlebarsTemplateDelegate<any>;
+    outputTemplate: HandlebarsTemplateDelegate<any>;
+    mkdirp: boolean | undefined;
+    dryRun: boolean;
+  }
+) {
+  const templateContext = {
+    games: games.map((game) => ({ ...game, safeName: sanitizeFilename(game.name) }))
+  };
+  const filename = config.outputFilenameTemplate(templateContext);
+  const content = config.outputTemplate(templateContext);
+  if (config.mkdirp) {
+    await makeDirectoryPathForFile(filename, config);
+  }
+  await writeContentsToFile(filename, content, config);
 }
 
 main();

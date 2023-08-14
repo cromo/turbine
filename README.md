@@ -51,6 +51,10 @@ If you installed globally, you can call `turbine` directly, otherwise you can ca
 
 **Required.** A Handlebars template to generate the content of each generated file. Uses the template context detailed below.
 
+### `--output-type` *"per-game" | "per-user"*
+
+Whether to generate a file for each game in the response or one file for all games. This can be useful to generate a file per game in one call, then create a file that links to all those generated files. Defaults to `"per-game"`.
+
 ### `--mkdirp` *boolean*
 
 Creates directories specified by the result of evaluating `--output-filename-template` if they do not exist. Named after the `mkdir -p` command, which recursively makes directories in a path. Defaults to `false`.
@@ -61,7 +65,7 @@ Still contact the Steam API and get the response, but print out the actions that
 
 ### Template context
 
-Templates have access to the following variables:
+Per-game templates have access to the following variables:
 
 - `appid`: The numeric ID of the software
 - `playtime_forever`: All recorded playtime for the software in minutes
@@ -73,6 +77,8 @@ Templates have access to the following variables:
 - `name`: The name of the software
 - `img_icon_url`: Part of a URL for the app's icon. The full URL is `http://media.steampowered.com/steamcommunity/public/images/apps/{{appid}}/{{img_icon_url}}.jpg`
 - `safeName`: The name of the software but sanitized so that it can be used as file names
+
+Per-user templates have a top level `games` value that is an array of objects of the above structure.
 
 ## Privacy policy
 
