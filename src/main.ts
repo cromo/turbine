@@ -32,14 +32,14 @@ async function parseConfig() {
       demandOption: true,
       describe: "A handlebars template to use for the filename of each game",
       type: "string",
-      coerce: (template: string) => Handlebars.compile(template),
+      coerce: (template: string) => Handlebars.compile(template, { noEscape: true }),
     })
     .option("output-template", {
       alias: "t",
       demandOption: true,
       describe: "A handlebars template to evaluate for each game and write to file",
       type: "string",
-      coerce: (template: string) => Handlebars.compile(template),
+      coerce: (template: string) => Handlebars.compile(template, { noEscape: true }),
     })
     .option("mkdirp", {
       alias: "d",
