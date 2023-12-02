@@ -2,7 +2,7 @@
 
 Turbine is a [Steam](https://store.steampowered.com/about/) powered file generator! Turbine uses responses from the Steam API to generate text files using [Handlebars templates](https://handlebarsjs.com/guide/). (Currently limited to generating a file for each of a user's owned games, but likely to expand in the future.)
 
-*Turbine is a third party application and is not endorsed nor affiliated with Valve or Steam.*
+_Turbine is a third party application and is not endorsed nor affiliated with Valve or Steam._
 
 ## Installation
 
@@ -35,31 +35,31 @@ If you installed globally, you can call `turbine` directly, otherwise you can ca
 
 `turbine` can be configured via command line arguments, environment variables, a JSON configuration file, or any combination of these. The primary way is via command line arguments, which is what is documented below. To use environment variables, remove the leading dashes of the command line argument, convert it to uppercase, replace all hyphens with underscores, and prefix it with `TURBINE_`, e.g. `--steam-api-key` becomes `TURBINE_STEAM_API_KEY`. To use a JSON file, place the argument name without leading dashes as keys in a top level object and pass the filename to the `--config` command line argument. A sample configuration file can be found at `config-example.json`.
 
-### `--steam-api-key` *string*
+### `--steam-api-key` _string_
 
 **Required.** The [Steam Web API key](https://steamcommunity.com/dev) to use. If you don't have one, you'll have to agree to the Steam API Terms of Use and request one.
 
-### `--steam-id` *string*
+### `--steam-id` _string_
 
 **Required.** The ID of the Steam user to get the list of owned games from.
 
-### `--output-filename-template` *string*
+### `--output-filename-template` _string_
 
 **Required.** A Handlebars template to generate names for each file to write. Uses the template context detailed below.
 
-### `--output-template` *string*
+### `--output-template` _string_
 
 **Required.** A Handlebars template to generate the content of each generated file. Uses the template context detailed below.
 
-### `--output-type` *"per-game" | "per-user"*
+### `--output-type` _"per-game" | "per-user"_
 
 Whether to generate a file for each game in the response or one file for all games. This can be useful to generate a file per game in one call, then create a file that links to all those generated files. Defaults to `"per-game"`.
 
-### `--mkdirp` *boolean*
+### `--mkdirp` _boolean_
 
 Creates directories specified by the result of evaluating `--output-filename-template` if they do not exist. Named after the `mkdir -p` command, which recursively makes directories in a path. Defaults to `false`.
 
-### `--dry-run` *boolean*
+### `--dry-run` _boolean_
 
 Still contact the Steam API and get the response, but print out the actions that would be taken to alter the filesystem instead of performing them. Useful to check paths and template expansions. Defaults to `false`.
 
