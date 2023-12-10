@@ -35,6 +35,12 @@ If you installed globally, you can call `turbine` directly, otherwise you can ca
 
 `turbine` can be configured via command line arguments, environment variables, a JSON configuration file, or any combination of these. The primary way is via command line arguments, which is what is documented below. To use environment variables, remove the leading dashes of the command line argument, convert it to uppercase, replace all hyphens with underscores, and prefix it with `TURBINE_`, e.g. `--steam-api-key` becomes `TURBINE_STEAM_API_KEY`. To use a JSON file, place the argument name without leading dashes as keys in a top level object and pass the filename to the `--config` command line argument. A sample configuration file can be found at `config-example.json`.
 
+At the moment, all calls to `turbine` must specify the `steam` subcommand:
+
+```bash
+turbine steam --steam-api-key ...
+```
+
 ### `--steam-api-key` _string_
 
 **Required.** The [Steam Web API key](https://steamcommunity.com/dev) to use. If you don't have one, you'll have to agree to the Steam API Terms of Use and request one.
