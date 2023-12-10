@@ -1,10 +1,10 @@
-import axios from "axios";
 import Handlebars from "handlebars";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { z } from "zod";
 import path from "node:path";
 import * as fs from "node:fs/promises";
+import { generateSteam } from "./steam";
 
 async function parseConfig() {
   return await yargs(hideBin(process.argv))
@@ -60,96 +60,6 @@ async function parseConfig() {
     .config().argv;
 }
 
-const baseOwnedGameSchema = z.object({
-  appid: z.number().int(),
-  playtime_forever: z.number().int(),
-  playtime_windows_forever: z.number().int(),
-  playtime_mac_forever: z.number().int(),
-  playtime_linux_forever: z.number().int(),
-  rtime_last_played: z.number().int(),
-  playtime_disconnected: z.number().int(),
-});
-const ownedGameWithAppInfoSchema = baseOwnedGameSchema.extend({
-  name: z.string(),
-  // Can be combined with the appid to form an image URL via:
-  // http://media.steampowered.com/steamcommunity/public/images/apps/{appid}/{hash}.jpg
-  img_icon_url: z.string(),
-  // It seems that this may not be included with all games?
-  // content_descriptorids: z.number().int().array(),
-});
-type OwnedGameWithAppInfo = z.infer<typeof ownedGameWithAppInfoSchema>;
-const getBaseOwnedGamesResponseSchema = z.object({
-  response: z.object({
-    game_count: z.number().int(),
-    games: baseOwnedGameSchema.array(),
-  }),
-});
-type GetBaseOwnedGamesResponse = z.infer<
-  typeof getBaseOwnedGamesResponseSchema
->;
-const getOwnedGamesWithAppInfoResponseSchema = z.object({
-  response: z.object({
-    game_count: z.number().int(),
-    games: ownedGameWithAppInfoSchema.array(),
-  }),
-});
-type GetOwnedGamesWithAppInfoResponse = z.infer<
-  typeof getOwnedGamesWithAppInfoResponseSchema
->;
-
-type GetOwnedGamesRequest = {
-  steamApiKey: string;
-  steamId: string;
-  includeAppInfo?: boolean;
-  includePlayedFreeGames?: boolean;
-};
-
-async function getOwnedGames(
-  requestArguments: Omit<GetOwnedGamesRequest, "includeAppInfo"> & {
-    includeAppInfo?: false;
-  },
-): Promise<GetBaseOwnedGamesResponse>;
-async function getOwnedGames(
-  requestArguments: Omit<GetOwnedGamesRequest, "includeAppInfo"> & {
-    includeAppInfo: true;
-  },
-): Promise<GetOwnedGamesWithAppInfoResponse>;
-async function getOwnedGames(
-  requestArguments: GetOwnedGamesRequest,
-): Promise<GetBaseOwnedGamesResponse | GetOwnedGamesWithAppInfoResponse> {
-  // Format based partly on https://developer.valvesoftware.com/wiki/Steam_Web_API#GetOwnedGames_.28v0001.29
-  // partly on inspecting the response.
-  const response = await axios.get(
-    "http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/",
-    {
-      params: {
-        key: requestArguments.steamApiKey,
-        steamid: requestArguments.steamId,
-        include_appinfo: requestArguments.includeAppInfo,
-        include_played_free_games: requestArguments.includePlayedFreeGames,
-        format: "json",
-      },
-    },
-  );
-  return requestArguments.includeAppInfo
-    ? getOwnedGamesWithAppInfoResponseSchema.parse(response.data)
-    : getBaseOwnedGamesResponseSchema.parse(response.data);
-}
-
-// Based on https://stackoverflow.com/a/31976060
-const forbiddenPattern =
-  /[<>:"/\\|?*]|[\x00-\x1F]|^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..+)?$|[ .]$/i;
-function isValidFilename(name: string): boolean {
-  return !forbiddenPattern.test(name);
-}
-
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/(?<! ): /g, " - ")
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
-    .trim();
-}
-
 function dryRunLog(log: { action: string; [Key: string]: unknown }) {
   console.debug(JSON.stringify(log));
 }
@@ -184,66 +94,24 @@ async function writeContentsToFile(
 
 async function main() {
   const config = await parseConfig();
-  const {
-    response: { games },
-  } = await getOwnedGames({
-    ...config,
-    includeAppInfo: true,
-    includePlayedFreeGames: true,
-  });
-  if (config.outputType === "per-game") {
-    await generateFilesPerGame(games, config);
-  } else {
-    await generateFilePerUser(games, config);
-  }
+  const fileWriter = buildFileWriter(config);
+  await generateSteam(config, fileWriter);
 }
 
-async function generateFilesPerGame(
-  games: OwnedGameWithAppInfo[],
-  config: {
-    outputFilenameTemplate: HandlebarsTemplateDelegate<any>;
-    outputTemplate: HandlebarsTemplateDelegate<any>;
-    mkdirp: boolean | undefined;
-    dryRun: boolean;
-  },
-) {
-  await Promise.all(
-    games.map(async (game) => {
-      const templateContext = {
-        ...game,
-        safeName: sanitizeFilename(game.name),
-      };
-      const filename = config.outputFilenameTemplate(templateContext);
-      const content = config.outputTemplate(templateContext);
-      if (config.mkdirp) {
-        await makeDirectoryPathForFile(filename, config);
-      }
-      await writeContentsToFile(filename, content, config);
-    }),
-  );
-}
-
-async function generateFilePerUser(
-  games: OwnedGameWithAppInfo[],
-  config: {
-    outputFilenameTemplate: HandlebarsTemplateDelegate<any>;
-    outputTemplate: HandlebarsTemplateDelegate<any>;
-    mkdirp: boolean | undefined;
-    dryRun: boolean;
-  },
-) {
-  const templateContext = {
-    games: games.map((game) => ({
-      ...game,
-      safeName: sanitizeFilename(game.name),
-    })),
+function buildFileWriter<TemplateContext = any>(config: {
+  outputFilenameTemplate: HandlebarsTemplateDelegate<any>;
+  outputTemplate: HandlebarsTemplateDelegate<any>;
+  mkdirp: boolean | undefined;
+  dryRun: boolean;
+}): (templateContext: TemplateContext) => Promise<void> {
+  return async (templateContext: TemplateContext): Promise<void> => {
+    const filename = config.outputFilenameTemplate(templateContext);
+    const content = config.outputTemplate(templateContext);
+    if (config.mkdirp) {
+      await makeDirectoryPathForFile(filename, config);
+    }
+    await writeContentsToFile(filename, content, config);
   };
-  const filename = config.outputFilenameTemplate(templateContext);
-  const content = config.outputTemplate(templateContext);
-  if (config.mkdirp) {
-    await makeDirectoryPathForFile(filename, config);
-  }
-  await writeContentsToFile(filename, content, config);
 }
 
 main();
