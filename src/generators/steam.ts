@@ -1,7 +1,7 @@
 import axios from "axios";
 import yargs from "yargs";
 import { z } from "zod";
-import { sanitizeFilename } from "./filename";
+import { sanitizeFilename } from "../filename";
 
 export const command = "steam";
 export const description = "Get owned game data from Steam";

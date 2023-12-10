@@ -14,9 +14,10 @@ type GeneratorSubcommand = {
   ) => Promise<void>;
 };
 
-async function parseConfig(steam: GeneratorSubcommand) {
-  return await yargs(hideBin(process.argv))
-    .command(steam.command, steam.description, steam.argumentParser)
+async function parseConfig(subcommands: GeneratorSubcommand[]) {
+  const parser = yargs(hideBin(process.argv));
+  subcommands.forEach(({command, description, argumentParser})=> parser.command(command, description, argumentParser))
+  return await parser
     .option("output-filename-template", {
       alias: "o",
       demandOption: true,
@@ -44,6 +45,7 @@ async function parseConfig(steam: GeneratorSubcommand) {
       type: "boolean",
       default: false,
     })
+    .demandCommand(1, "Must specify a generator to use")
     .env("TURBINE")
     .config().argv;
 }
@@ -81,11 +83,14 @@ async function writeContentsToFile(
 }
 
 async function main() {
-  const steam = await import("./steam");
+  const generatorsByCommand: Record<string, GeneratorSubcommand> = {
+    steam: await import("./generators/steam")
+  };
 
-  const config = await parseConfig(steam);
+  const config = await parseConfig(Object.values(generatorsByCommand));
+  const generator = config._[0];
   const fileWriter = buildFileWriter(config);
-  await steam.generator(config, fileWriter);
+  await generatorsByCommand[generator].generator(config, fileWriter);
 }
 
 function buildFileWriter<TemplateContext = any>(config: {
