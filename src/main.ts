@@ -89,8 +89,7 @@ async function main() {
 
   const config = await parseConfig(Object.values(generatorsByCommand));
   const generator = config._[0];
-  const fileWriter = buildFileWriter(config);
-  await generatorsByCommand[generator].generator(config, fileWriter);
+  await generatorsByCommand[generator].generator(config, buildFileWriter(config));
 }
 
 function buildFileWriter<TemplateContext = any>(config: {
