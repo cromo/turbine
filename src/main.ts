@@ -1,34 +1,22 @@
 import Handlebars from "handlebars";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { z } from "zod";
 import path from "node:path";
 import * as fs from "node:fs/promises";
-import { generateSteam } from "./steam";
 
-async function parseConfig() {
+type GeneratorSubcommand = {
+  command: string;
+  description: string;
+  argumentParser: (yargs: yargs.Argv) => yargs.Argv;
+  generator: (
+    config: unknown,
+    fileWriter: (templateContext: any) => Promise<void>,
+  ) => Promise<void>;
+};
+
+async function parseConfig(steam: GeneratorSubcommand) {
   return await yargs(hideBin(process.argv))
-    .option("steam-api-key", {
-      alias: "k",
-      demandOption: true,
-      describe: "Your Steam API key",
-      type: "string",
-    })
-    .option("steam-id", {
-      alias: "i",
-      demandOption: true,
-      describe: "The Steam ID of your account",
-      type: "string",
-    })
-    .option("output-type", {
-      default: "per-game",
-      choices: ["per-game", "per-user"],
-      describe:
-        "Whether to apply the template once per game or for a user's entire library at once",
-      type: "string",
-      coerce: (choice: string) =>
-        z.enum(["per-game", "per-user"]).parse(choice),
-    })
+    .command(steam.command, steam.description, steam.argumentParser)
     .option("output-filename-template", {
       alias: "o",
       demandOption: true,
@@ -93,9 +81,11 @@ async function writeContentsToFile(
 }
 
 async function main() {
-  const config = await parseConfig();
+  const steam = await import("./steam");
+
+  const config = await parseConfig(steam);
   const fileWriter = buildFileWriter(config);
-  await generateSteam(config, fileWriter);
+  await steam.generator(config, fileWriter);
 }
 
 function buildFileWriter<TemplateContext = any>(config: {

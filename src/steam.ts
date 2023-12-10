@@ -1,6 +1,59 @@
 import axios from "axios";
+import yargs from "yargs";
 import { z } from "zod";
 import { sanitizeFilename } from "./filename";
+
+export const command = "steam";
+export const description = "Get owned game data from Steam";
+
+export const argumentParser = (yargs: yargs.Argv) =>
+  yargs
+    .option("steam-api-key", {
+      alias: "k",
+      demandOption: true,
+      describe: "Your Steam API key",
+      type: "string",
+    })
+    .option("steam-id", {
+      alias: "i",
+      demandOption: true,
+      describe: "The Steam ID of your account",
+      type: "string",
+    })
+    .option("output-type", {
+      default: "per-game",
+      choices: ["per-game", "per-user"],
+      describe:
+        "Whether to apply the template once per game or for a user's entire library at once",
+      type: "string",
+      coerce: (choice: string) =>
+        z.enum(["per-game", "per-user"]).parse(choice),
+    });
+
+export async function generator(
+  config: unknown,
+  fileWriter: (templateContext: any) => Promise<void>,
+) {
+  const parsedConfig = z
+    .object({
+      steamApiKey: z.string(),
+      steamId: z.string(),
+      outputType: z.enum(["per-game", "per-user"]),
+    })
+    .parse(config);
+  const {
+    response: { games },
+  } = await getOwnedGames({
+    ...parsedConfig,
+    includeAppInfo: true,
+    includePlayedFreeGames: true,
+  });
+  const generator =
+    parsedConfig.outputType === "per-game"
+      ? generateFilesPerGame
+      : generateFilePerUser;
+  await generator(games, fileWriter);
+}
 
 const baseOwnedGameSchema = z.object({
   appid: z.number().int(),
@@ -79,28 +132,6 @@ async function getOwnedGames(
   return requestArguments.includeAppInfo
     ? getOwnedGamesWithAppInfoResponseSchema.parse(response.data)
     : getBaseOwnedGamesResponseSchema.parse(response.data);
-}
-
-export async function generateSteam(
-  config: {
-    steamApiKey: string;
-    steamId: string;
-    outputType: "per-game" | "per-user";
-  },
-  fileWriter: (templateContext: any) => Promise<void>,
-) {
-  const {
-    response: { games },
-  } = await getOwnedGames({
-    ...config,
-    includeAppInfo: true,
-    includePlayedFreeGames: true,
-  });
-  const generator =
-    config.outputType === "per-game"
-      ? generateFilesPerGame
-      : generateFilePerUser;
-  await generator(games, fileWriter);
 }
 
 async function generateFilesPerGame(
